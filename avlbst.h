@@ -137,6 +137,11 @@ protected:
     virtual void nodeSwap( AVLNode<Key,Value>* n1, AVLNode<Key,Value>* n2);
 
     // Add helper functions here
+    int getHeight(Node<Key,Value>* n) const;
+    void updateBalances(Node<Key,Value>* n);
+    void leftRotate(AVLNode<Key,Value>* n);
+    void rightRotate(AVLNode<Key,Value>* n);
+    void fixUpwards(AVLNode<Key,Value>* n);
 
 
 };
@@ -149,6 +154,45 @@ template<class Key, class Value>
 void AVLTree<Key, Value>::insert (const std::pair<const Key, Value> &new_item)
 {
     // TODO
+    if(this->root_ == nullptr)
+    {
+        AVLNode<Key,Value>* r = new AVLNode<Key,Value>(item.first, item.second, nullptr);
+        r->setBalance(0);
+        this->root_ = r;
+        return;
+    }
+
+    Node<Key,Value>* walk = this->root_;
+    Node<Key,Value>* parent = nullptr;
+
+    while(walk != nullptr)
+    {
+        parent = walk;
+
+        if(item.first < walk->getKey())
+            walk = walk->getLeft();
+        else if(walk->getKey() < item.first)
+            walk = walk->getRight();
+        else
+        {
+            walk->setValue(item.second);
+            return;
+        }
+    }
+
+    AVLNode<Key,Value>* avParent = static_cast<AVLNode<Key,Value>*>(parent);
+    AVLNode<Key,Value>* newNode =
+        new AVLNode<Key,Value>(item.first, item.second, avParent);
+
+    if(item.first < parent->getKey())
+        parent->setLeft(newNode);
+    else
+        parent->setRight(newNode);
+
+    fixUpwards(avParent);
+    updateBalances(this->root_);
+
+
 }
 
 /*
@@ -159,6 +203,43 @@ template<class Key, class Value>
 void AVLTree<Key, Value>:: remove(const Key& key)
 {
     // TODO
+    Node<Key,Value>* target = this->internalFind(key);
+    if(target == nullptr)
+        return;
+
+    if(target->getLeft() != nullptr && target->getRight() != nullptr)
+    {
+        Node<Key,Value>* pred = BinarySearchTree<Key,Value>::predecessor(target);
+        nodeSwap(
+            static_cast<AVLNode<Key,Value>*>(target),
+            static_cast<AVLNode<Key,Value>*>(pred)
+        );
+    }
+
+    Node<Key,Value>* child =
+        (target->getLeft() != nullptr ? target->getLeft() : target->getRight());
+
+    AVLNode<Key,Value>* parent =
+        static_cast<AVLNode<Key,Value>*>(target->getParent());
+
+    if(child != nullptr)
+        child->setParent(parent);
+
+    if(parent == nullptr)
+        this->root_ = child;
+    else if(target == parent->getLeft())
+        parent->setLeft(child);
+    else
+        parent->setRight(child);
+
+    delete target;
+
+    if(parent != nullptr)
+        fixUpwards(parent);
+    else if(this->root_ != nullptr)
+        fixUpwards(static_cast<AVLNode<Key,Value>*>(this->root_));
+
+    updateBalances(this->root_);
 }
 
 template<class Key, class Value>
@@ -169,6 +250,147 @@ void AVLTree<Key, Value>::nodeSwap( AVLNode<Key,Value>* n1, AVLNode<Key,Value>* 
     n1->setBalance(n2->getBalance());
     n2->setBalance(tempB);
 }
+
+template<class Key, class Value>
+int AVLTree<Key, Value>::getHeight(Node<Key,Value>* n) const
+{
+ if(n == nullptr) {
+        return 0;
+    }
+
+    int leftSide  = getHeight(n->getLeft());
+    int rightSide = getHeight(n->getRight());
+
+    if(leftSide > rightSide)
+        return leftSide + 1;
+    else
+        return rightSide + 1;
+}
+
+template<class Key, class Value>
+void AVLTree<Key, Value>::updateBalances(Node<Key,Value>* n)
+{
+    if(n == nullptr)
+        return;
+
+    updateBalances(n->getLeft());
+    updateBalances(n->getRight());
+
+    int hLeft  = getHeight(n->getLeft());
+    int hRight = getHeight(n->getRight());
+    int diff   = hRight - hLeft;
+
+    AVLNode<Key,Value>* av = static_cast<AVLNode<Key,Value>*>(n);
+    av->setBalance((int8_t)diff);
+}
+
+template<class Key, class Value>
+void AVLTree<Key, Value>::leftRotate(AVLNode<Key,Value>* n)
+{
+    if(n == nullptr || n->getRight() == nullptr)
+        return;
+
+    AVLNode<Key,Value>* child = n->getRight();
+    AVLNode<Key,Value>* parent = n->getParent();
+    AVLNode<Key,Value>* middle = child->getLeft();
+
+    child->setParent(parent);
+
+    if(parent == nullptr)
+        this->root_ = child;
+    else if(n == parent->getLeft())
+        parent->setLeft(child);
+    else
+        parent->setRight(child);
+
+    child->setLeft(n);
+    n->setParent(child);
+
+    n->setRight(middle);
+    if(middle != nullptr)
+        middle->setParent(n);
+}
+
+
+template<class Key, class Value>
+void AVLTree<Key, Value>::rightRotate(AVLNode<Key,Value>* n)
+{
+    if(n == nullptr || n->getLeft() == nullptr)
+        return;
+
+    AVLNode<Key,Value>* child = n->getLeft();
+    AVLNode<Key,Value>* parent = n->getParent();
+    AVLNode<Key,Value>* middle = child->getRight();
+
+    child->setParent(parent);
+
+    if(parent == nullptr)
+        this->root_ = child;
+    else if(n == parent->getLeft())
+        parent->setLeft(child);
+    else
+        parent->setRight(child);
+
+    child->setRight(n);
+    n->setParent(child);
+
+    n->setLeft(middle);
+    if(middle != nullptr)
+        middle->setParent(n);
+}
+
+
+template<class Key, class Value>
+void AVLTree<Key,Value>::fixUpwards(AVLNode<Key,Value>* n)
+{
+    AVLNode<Key,Value>* cur = n;
+
+    while(cur != nullptr)
+    {
+        int leftH  = getHeight(cur->getLeft());
+        int rightH = getHeight(cur->getRight());
+        int balance    = rightH - leftH;
+
+        
+        if(        int balance    = rightH - leftH;
+ < -1)
+        {
+            AVLNode<Key,Value>* L = cur->getLeft();
+            int LL = getHeight(L->getLeft());
+            int LR = getHeight(L->getRight());
+
+            if(LL >= LR)
+            {
+                rightRotate(cur);
+            }
+            else
+            {
+                leftRotate(L);
+                rightRotate(cur);
+            }
+        }
+      
+        else if(balance > 1)
+        {
+            AVLNode<Key,Value>* R = cur->getRight();
+            int RR = getHeight(R->getRight());
+            int RL = getHeight(R->getLeft());
+
+            if(RR >= RL)
+            {
+                leftRotate(cur);
+            }
+            else
+            {
+                rightRotate(R);
+                leftRotate(cur);
+            }
+        }
+
+        cur = cur->getParent();
+    }
+}
+
 
 
 #endif
