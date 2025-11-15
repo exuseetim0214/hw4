@@ -657,8 +657,8 @@ bool BinarySearchTree<Key, Value>::isBalanced() const
       static int checkHeight(Node<Key, Value>* node){
           if(node == NULL) return 0;
 
-          int left_height = check(node->getLeft());
-          int right_height = check(node->getRgiht());
+          int left_height = checkHeight(node->getLeft());
+          int right_height = checkHeight(node->getRight());
 
           if(left_height == -1 || right_height == -1){
             return -1;

@@ -156,7 +156,7 @@ void AVLTree<Key, Value>::insert (const std::pair<const Key, Value> &new_item)
     // TODO
     if(this->root_ == nullptr)
     {
-        AVLNode<Key,Value>* r = new AVLNode<Key,Value>(item.first, item.second, nullptr);
+        AVLNode<Key,Value>* r = new AVLNode<Key,Value>(new_item.first, new_item.second, nullptr);
         r->setBalance(0);
         this->root_ = r;
         return;
@@ -169,22 +169,22 @@ void AVLTree<Key, Value>::insert (const std::pair<const Key, Value> &new_item)
     {
         parent = walk;
 
-        if(item.first < walk->getKey())
+        if(new_item.first < walk->getKey())
             walk = walk->getLeft();
-        else if(walk->getKey() < item.first)
+        else if(walk->getKey() < new_item.first)
             walk = walk->getRight();
         else
         {
-            walk->setValue(item.second);
+            walk->setValue(new_item.second);
             return;
         }
     }
 
     AVLNode<Key,Value>* avParent = static_cast<AVLNode<Key,Value>*>(parent);
     AVLNode<Key,Value>* newNode =
-        new AVLNode<Key,Value>(item.first, item.second, avParent);
+        new AVLNode<Key,Value>(new_item.first, new_item.second, avParent);
 
-    if(item.first < parent->getKey())
+    if(new_item.first < parent->getKey())
         parent->setLeft(newNode);
     else
         parent->setRight(newNode);
@@ -349,11 +349,10 @@ void AVLTree<Key,Value>::fixUpwards(AVLNode<Key,Value>* n)
     {
         int leftH  = getHeight(cur->getLeft());
         int rightH = getHeight(cur->getRight());
-        int balance    = rightH - leftH;
+        int balance = rightH - leftH;
 
         
-        if(        int balance    = rightH - leftH;
- < -1)
+        if(balance < -1)
         {
             AVLNode<Key,Value>* L = cur->getLeft();
             int LL = getHeight(L->getLeft());
